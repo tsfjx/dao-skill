@@ -7,49 +7,51 @@ RAW_DIR="${1:-$HOME/.knowledge/raw}"
 CORE_WISDOM="${2:-$HOME/.claude/rules/core-wisdom.md}"
 
 echo "=== RAW 聚类 ==="
-declare -A CAT_COUNT CAT_PROJECTS
+declare -A CAT_COUNT CAT_SIGNATURES CAT_PROJECTS
 
 for f in "$RAW_DIR"/*.md; do
   [ -f "$f" ] || continue
 
-  cat=$(grep -oP 'category:\s*\K.*' "$f" 2>/dev/null || echo "uncategorized")
-  cat=$(echo "$cat" | xargs); [ -z "$cat" ] && cat="uncategorized"
+  cat=$(awk -F': ' '/^category:/ {print $2}' "$f" | xargs)
+  [ -z "$cat" ] && cat="uncategorized"
 
-  sig=$(grep -oP 'error_signature:\s*\K.*' "$f" 2>/dev/null || echo "")
-  sig=$(echo "$sig" | xargs)
+  sig=$(awk -F': ' '/^error_signature:/ {print $2}' "$f" | xargs)
+  [ -z "$sig" ] && sig="(no signature)"
 
-  proj=$(grep -oP 'project:\s*\K.*' "$f" 2>/dev/null || echo "unknown")
-  proj=$(echo "$proj" | xargs)
+  proj=$(awk -F': ' '/^project:/ {print $2}' "$f" | xargs)
+  [ -z "$proj" ] && proj="unknown"
 
   echo "  [$cat] $sig ($proj)"
 
-  key="${cat}|${sig}"
-  CAT_COUNT["$key"]=$((${CAT_COUNT["$key"]:-0} + 1))
-
-  seen="${key}|projs"
-  CAT_PROJECTS["$seen"]="${CAT_PROJECTS["$seen"]:-}$proj,"
+  CAT_COUNT["$cat"]=$((${CAT_COUNT["$cat"]:-0} + 1))
+  CAT_SIGNATURES["$cat"]="${CAT_SIGNATURES["$cat"]:-}  - $sig
+"
+  CAT_PROJECTS["$cat"]="${CAT_PROJECTS["$cat"]:-}$proj,"
 done
 
 echo ""; echo "=== 聚类结果（≥2 次）==="
-for key in "${!CAT_COUNT[@]}"; do
-  count="${CAT_COUNT[$key]}"
+for cat in "${!CAT_COUNT[@]}"; do
+  count="${CAT_COUNT[$cat]}"
   [ "$count" -ge 2 ] || continue
 
-  cat="${key%%|*}"; sig="${key#*|}"
-  proj_list="${CAT_PROJECTS[${key}|projs]:-unknown}"
+  proj_list="${CAT_PROJECTS[$cat]:-unknown}"
   proj_count=$(echo "$proj_list" | tr ',' '\n' | sort -u | grep -c .)
 
-  echo "  category=$cat count=$count projects=$proj_count"
-  echo "    signature: $sig"
+  echo "  category=$cat | count=$count | projects=$proj_count"
+  echo "  signatures:"
+  echo "${CAT_SIGNATURES[$cat]}"
 done
 
 echo ""; echo "=== 退化检查 ==="
 if [ -f "$CORE_WISDOM" ]; then
   while IFS= read -r line; do
     if echo "$line" | grep -q '<!-- meta:'; then
-      last=$(echo "$line" | grep -oP 'last=\K[0-9-]+' || echo "")
-      hits=$(echo "$line" | grep -oP 'hit=\K[0-9]+' || echo "0")
-      projs=$(echo "$line" | grep -oP 'projects=\K[0-9]+' || echo "0")
+      last=$(echo "$line" | sed -n 's/.*last=\([0-9-]*\).*/\1/p')
+      [ -z "$last" ] && last=""
+      hits=$(echo "$line" | sed -n 's/.*hit=\([0-9]*\).*/\1/p')
+      [ -z "$hits" ] && hits="0"
+      projs=$(echo "$line" | sed -n 's/.*projects=\([0-9]*\).*/\1/p')
+      [ -z "$projs" ] && projs="0"
       echo "  meta: last=$last hit=$hits projects=$projs"
       if [ -n "$last" ]; then
         last_epoch=$(date -d "$last" +%s 2>/dev/null || echo 0)
