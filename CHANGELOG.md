@@ -2,6 +2,11 @@
 
 All notable changes to dao-skill will be documented in this file.
 
+## [v1.6.8] - 2026-06-28
+
+### Changed
+- README 重写为人类阅读风格：分段清晰、哲学映射可视化、回答「它解决什么问题」、统一安装用语
+
 ## [v1.6.7] - 2026-06-28
 
 ### Fixed
