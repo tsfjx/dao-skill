@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.0] - 2026-06-28
+## [v1.6.1] - 2026-06-28
 
 ### Added
 - 初始版本
