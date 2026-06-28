@@ -2,6 +2,15 @@
 
 All notable changes to dao-skill will be documented in this file.
 
+## [v1.6.11] - 2026-06-28
+
+### Changed
+- **自动注入**：确认 `~/.claude/rules/*.md` 被 Claude Code 原生自动加载。修正 SKILL.md 生效机制描述
+- **命令注册**：新增 `commands/evolve.md` `commands/rules.md`，plugin.json 注册 `/evolve` `/rules`
+- **安装统一**：install.sh 目标改为 `dao-{概念}`，支持 `--force` 强制覆盖+备份，glob 替代 ls，依赖检测
+- **文案修正**：README 改为「框架 + 首个 skill」，顶部加名字速查表
+- 全部文档同步更新目录结构图
+
 ## [v1.6.8] - 2026-06-28
 
 ### Changed

@@ -24,11 +24,9 @@ dao-sun 做两件事：
 
 ## 规则生效机制
 
-dao-sun 生成的规则写入 `~/.claude/rules/core-wisdom.md`，Claude Code 会自动将此文件注入每次会话的系统指令——**AI 无法忽略，无需手动加载。**
+dao-sun 生成的规则写入 `~/.claude/rules/core-wisdom.md`。
 
-CLAUDE.md 中已包含指令：
-
-> 遇到错误或做技术选型时，先检索 ~/.claude/rules/core-wisdom.md 中的历史经验和偏好规则。如有匹配，优先遵循。
+Claude Code 启动时自动递归加载 `~/.claude/rules/*.md` 中的所有 markdown 文件并注入系统指令——这是 Claude Code 原生支持的机制，无需手动加载，AI 无法忽略。
 
 ---
 
@@ -144,11 +142,14 @@ Step 5: 写入 → 备份 → 写入 ~/.claude/rules/core-wisdom.md → 归档 r
 
 ```
 ~/.claude/
-├── CLAUDE.md                       # 全局指令（含 Wisdom 规则引用）
 ├── rules/
-│   └── core-wisdom.md              # Wisdom 生成的规则，自动注入 AI 上下文
+│   └── core-wisdom.md              # 规则文件，Claude Code 启动时自动加载
 └── skills/
-    └── sun/SKILL.md                # 本 Skill（name: dao-sun）
+    └── dao-sun/                    # 本 Skill 安装目录
+        ├── SKILL.md
+        └── commands/
+            ├── evolve.md
+            └── rules.md
 
 ~/.knowledge/
 ├── raw/                            # 原始经验记录
