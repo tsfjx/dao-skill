@@ -43,43 +43,67 @@ Claude Code 启动时自动递归加载 `~/.claude/rules/*.md` 中的所有 mark
 
 ## 采集模式
 
+### 采集协议（强制性）
+
+所有采集记录使用统一的 YAML 模板。**以下字段缺一不可，不填不能保存：**
+
+```yaml
+type: fix | preference          # 必填，二选一
+category: string                # 必填，从下方分类表中选择
+error_signature: string         # 必填，机器可匹配的错误模式（一行）
+solution: string                # 必填，可执行的命令或步骤（一行）
+why: string                     # 必填，一句根因解释
+project: string                 # 必填，当前项目名
+timestamp: ISO8601              # 自动生成
+```
+
+**分类表（category 必须从以下选择一个，不可自造）：**
+
+| 分类 | 适用范围 | 示例 error_signature |
+|------|---------|---------------------|
+| `dependency` | 包管理、依赖版本冲突 | npm ERESOLVE / cargo resolver / pip conflict |
+| `config` | 配置错误、环境变量 | config file not found / env var missing |
+| `port` | 端口占用、网络 | EADDRINUSE / connection refused |
+| `auth` | 权限、认证、密钥 | 403 forbidden / ssh key denied |
+| `build` | 编译、构建 | compilation error / linker error |
+| `runtime` | 运行时异常 | TypeError / NullPointer / segmentation fault |
+| `testing` | 测试框架、断言 | test timeout / assertion failed |
+| `workflow` | 开发流程、方法论 | git rebase conflict / code review preference |
+| `tooling` | 工具配置、编辑器 | ESLint rule / formatter config / IDE setting |
+
 ### 纠错型采集
 
 用户说"记住这个解法"时执行。**必须在用户纠正 AI 的当下立刻采集**——此时 why 信息最完整。
 
-1. 从会话中提取：
-   - `error_signature`: 错误的通用特征
-   - `solution`: 最终有效的解法
-   - `why`: **你为什么这么纠正**——从你的纠正话语中提取原因，不要猜
-   - `project`: 项目名（可选）
+1. 从会话中提取必填字段，**所有字段必须填写**
+2. 展示确认信息，等待用户确认
+3. 确认后写入 `~/.knowledge/raw/YYYY-MM-DD-HHMM.md`
 
-2. 单行确认后写入 `~/.knowledge/raw/YYYY-MM-DD-HHMM.md`：
-   ```yaml
-   type: "fix"
-   error_signature: "npm ERESOLVE 依赖版本冲突"
-   solution: "npm ci"
-   why: "lockfile 是真相来源，与 package.json 版本声明不一致时 npm 报错。删除 node_modules 治标不治本。"
-   project: "nextjs-app"
-   ```
+确认模板：
+```
+📝 准备记录到 Raw 库：
+
+type: fix
+category: [从分类表选一个]
+error_signature: [AI 提取]
+solution: [AI 提取]
+why: [从你的纠正话语中提取，提取不到则追问]
+project: [当前项目名]
+
+确认保存？
+```
 
 ### 偏好型采集
 
-用户说"以后默认用 X"时执行。
+用户说"以后默认用 X"时执行。同样走强制模板：
 
-1. 从会话中提取：
-   - `scenario`: 场景描述
-   - `preference`: 你选择的方案
-   - `alternative`: 被排除的方案（可选）
-   - `why`: 为什么选这个
-
-2. 确认后写入 `~/.knowledge/raw/YYYY-MM-DD-HHMM.md`：
-   ```yaml
-   type: "preference"
-   scenario: "写前端单元测试"
-   preference: "vitest"
-   alternative: "jest"
-   why: "vitest 更快，原生支持 ESM，与 Vite 生态一致"
-   ```
+```yaml
+type: preference
+category: [workflow/tooling/testing 等]
+error_signature: [描述触发场景]
+solution: [你的选择]
+why: [为什么选这个]
+```
 
 **注意**：如果无法从你的纠正话语中提取 `why`，追问一句"为什么这样更好？"——不要猜。
 
@@ -87,16 +111,54 @@ Claude Code 启动时自动递归加载 `~/.claude/rules/*.md` 中的所有 mark
 
 ## 进化模式 (/dao-evolve)
 
-扫描 `~/.knowledge/raw/`，按 `error_signature`/`scenario` 分组。对每类高频经验（≥2 次）提炼一条规则。
+### 提炼流程
 
-### 上下文预算
+```
+Step 0: 脚本聚类 → bash scripts/cluster.sh ~/.knowledge/raw ~/.claude/rules/core-wisdom.md
+                  按 category 字段机械分组（脚本级，非 AI 判断）
+                  输出：组统计 + 退化建议
 
-`core-wisdom.md` 每次会话自动注入 AI 上下文，**必须极端精简。** 每条规则不超过 3 行，全文件不超过 30 行（~500 tokens）。超量时淘汰命中次数最低的规则。
+Step 1: 聚类确认 → AI 验证分组合并是否合理
+                  同 category 同 error_signature → 合并为一条候选
 
-**收录门槛**：只收满足以下至少 2 条的经验：
+Step 2: 筛选    → 收录门槛（满足 ≥2 条）：
+                  - 跨项目出现过（≥2 个项目）
+                  - 命中 ≥3 次
+                  - 属于根本性方法论
+                  不达标的归档但不进入 core-wisdom
+
+Step 3: 退化淘汰 → 脚本已输出退化建议，AI 确认：
+                  - 90 天未命中 → 标记「待淘汰」
+                  - 已标记过的「待淘汰」→ 本次正式删除
+
+Step 4: 提炼    → 每条规则 ≤3 行，含 Why、已脱敏
+                  附带 meta 注释（category / hit / last / projects）
+
+Step 5: 预算控制 → 全部规则 ≤30 行。超量按 hit 升序淘汰（冷门先出）
+
+Step 6: 写入    → 备份旧版 → 覆盖 core-wisdom.md → 归档 raw/
+```
+
+### 规则元数据
+
+每条规则在 core-wisdom.md 中附带元数据（HTML 注释，不占上下文）：
+
+```markdown
+<!-- meta: category=dependency | hit=15 | last=2026-06-28 | projects=3 -->
+- npm 依赖冲突 → `npm ci`。Why: lockfile 是真相来源。
+```
+
+### 收录门槛
+
+只收满足以下至少 2 条的经验：
 - 跨项目出现过（≥2 个项目）
 - 命中 ≥3 次
 - 属于根本性方法论（非特定版本的临时 workaround）
+
+### 退化规则
+
+- 90 天未命中 → 标记「待淘汰」，下次 /dao-evolve 时正式删除
+- 总行数超 30 行 → 按 hit_count 升序淘汰（命中最低的先出）
 
 ### 提炼约束
 
@@ -106,28 +168,19 @@ Claude Code 启动时自动递归加载 `~/.claude/rules/*.md` 中的所有 mark
 | 2 | **溯其因** | 一句话说清根因或理由 |
 | 3 | **已脱敏** | 不含具体路径、IP、端口、密钥。用 `{root}`、`{port}`、`{api_key}` 替代 |
 
-### 提炼流程
-
-```
-Step 1: 聚类 → 按 type 分组，找出 ≥2 次的同类经验
-Step 2: 筛选 → 按收录门槛过滤，不达标的归档但不进入 core-wisdom
-Step 3: 提炼 → 每条规则 ≤3 行。纠错型: If-Then-Why，偏好型: 场景-默认-Why
-Step 4: 验证 → 检查全部文件 ≤30 行。超量则按命中次数升序淘汰
-Step 5: 写入 → 备份 → 写入 ~/.claude/rules/core-wisdom.md → 归档 raw/
-```
-
 ### 规则格式
 
 ```markdown
 # Core-Wisdom — 全局规则（≤30行）
 
-## 纠错
-- npm 依赖冲突 → `npm ci`。Why: lockfile 是真相来源，与 package.json 版本不一致时报错。
-- 端口占用 → `lsof -i :{port}` 查进程再 kill。Why: 换端口是逃避，根因是旧进程未释放。
+<!-- meta: category=dependency | hit=15 | last=2026-06-28 | projects=3 -->
+- npm 依赖冲突 → `npm ci`。Why: lockfile 是真相来源，与版本声明不一致时报错。
 
-## 偏好
+<!-- meta: category=port | hit=12 | last=2026-06-28 | projects=2 -->
+- 端口占用 → `lsof -i :{port}` 查进程再 kill。Why: 旧进程未释放是根因。
+
+<!-- meta: category=testing | hit=8 | last=2026-06-25 | projects=2 -->
 - 测试：vitest（不用 jest）。Why: 原生 ESM，与 Vite 一致。
-- 包管理：pnpm（不用 npm）。Why: 更快，磁盘空间省 50%+。
 ```
 
 ---
@@ -147,9 +200,11 @@ Step 5: 写入 → 备份 → 写入 ~/.claude/rules/core-wisdom.md → 归档 r
 └── skills/
     └── dao-sun/                    # 本 Skill 安装目录
         ├── SKILL.md
-        └── commands/
-            ├── evolve.md
-            └── rules.md
+        ├── commands/
+        │   ├── dao-evolve.md
+        │   └── dao-rules.md
+        └── scripts/
+            └── cluster.sh          # 聚类脚本（机械分组）
 
 ~/.knowledge/
 ├── raw/                            # 原始经验记录

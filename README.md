@@ -75,6 +75,8 @@ dao-skill/
         ├── commands/
         │   ├── dao-evolve.md  # /dao-evolve 命令
         │   └── dao-rules.md   # /dao-rules 命令
+        ├── scripts/
+        │   └── cluster.sh     # 聚类脚本（机械分组）
         └── .claude-plugin/
             └── plugin.json    # 插件元数据（name: dao-sun）
 ```
