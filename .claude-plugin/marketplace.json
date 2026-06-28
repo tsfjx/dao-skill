@@ -8,7 +8,6 @@
     {
       "name": "dao-sun",
       "description": "日损·经验蒸馏 — 为学日益，为道日损。将开发经验自动净化为黄金规则，纠错型 + 偏好型双轨采集，规则自动注入上下文。",
-      "version": "1.6.7",
       "source": {
         "source": "git-subdir",
         "url": "tsfjx/dao-skill",

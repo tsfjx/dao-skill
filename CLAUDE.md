@@ -52,6 +52,7 @@ dao-skill/
 ├── LICENSE                # MIT
 ├── CHANGELOG.md           # 版本记录
 ├── install.sh             # 安装脚本
+├── uninstall.sh           # 卸载脚本
 ├── .gitignore
 ├── .claude-plugin/
 │   └── marketplace.json   # 插件市场注册
