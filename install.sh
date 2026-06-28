@@ -2,7 +2,7 @@
 set -e
 
 SKILLS_DIR="${HOME}/.claude/skills"
-REPO_URL="git@github.com:tsfjx/dao-skill.git"
+REPO_URL="https://github.com/tsfjx/dao-skill.git"
 REPO_DIR="${SKILLS_DIR}/dao-skill"
 
 echo "☯  道·Skill 安装器"
