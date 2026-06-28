@@ -82,4 +82,8 @@ for skill in "${TARGETS[@]}"; do
   INSTALLED=$((INSTALLED + 1))
 done
 
+# 创建 dao-sun 所需的运行时目录
+mkdir -p "${HOME}/.claude/rules" "${HOME}/.knowledge/raw" "${HOME}/.knowledge/archived"
+echo "  ✓ 运行时目录已就绪"
+
 echo "☯  完成！已安装 ${INSTALLED} 个 skill"
