@@ -111,12 +111,13 @@ curl -fsSL https://raw.githubusercontent.com/tsfjx/dao-skill/main/install.sh | b
 curl -fsSL https://raw.githubusercontent.com/tsfjx/dao-skill/main/install.sh | bash -s sun
 ```
 
-**离线安装（下载 .tar.gz 包）：**
+**离线安装（下载 .zip 包）：**
 
-从 [GitHub Releases](https://github.com/tsfjx/dao-skill/releases) 下载 `dao-sun.skill.tar.gz`，解压到 `~/.claude/skills/`：
+从 [GitHub Releases](https://github.com/tsfjx/dao-skill/releases) 下载 `dao-sun.skill.zip`，解压到 `~/.claude/skills/`：
 
 ```bash
-tar -xzf dao-sun.skill.tar.gz -C ~/.claude/skills/
+# 解压后把 dao-sun 目录放入 skills
+unzip dao-sun.skill.zip -d ~/.claude/skills/
 ```
 
 **卸载：**
